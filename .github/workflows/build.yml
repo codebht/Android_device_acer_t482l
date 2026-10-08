@@ -1,1 +1,78 @@
-y
+name: Build LineageOS 20
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          df -h
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            git-core gnupg flex bison build-essential zip curl \
+            zlib1g-dev libc6-dev-i386 libncurses5 \
+            libx11-dev libgl1-mesa-dev libxml2-utils xsltproc \
+            unzip fontconfig python3
+
+      - name: Install repo
+        run: |
+          mkdir -p ~/bin
+          curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
+          chmod a+x ~/bin/repo
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+
+      - name: Initialize LineageOS 20
+        run: |
+          mkdir los20
+          cd los20
+          repo init \
+            -u https://github.com/LineageOS/android.git \
+            -b lineage-20.0 \
+            --git-lfs
+
+      - name: Add Acer local manifest
+        run: |
+          cd los20
+          mkdir -p .repo/local_manifests
+
+          cat > .repo/local_manifests/acer.xml <<'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <manifest>
+
+              <project
+                  name="codebht/Android_device_t482l"
+                  path="device/acer/AcerOne8T482L"
+                  remote="github"
+                  revision="main" />
+
+              <project
+                  name="codebht/android_vendor_T482L"
+                  path="vendor/acer/AcerOne8T482L"
+                  remote="github"
+                  revision="main" />
+
+          </manifest>
+          EOF
+
+      - name: Sync source
+        run: |
+          cd los20
+          repo sync -c -j2 --no-clone-bundle --no-tags
+
+      - name: Build
+        run: |
+          cd los20
+          source build/envsetup.sh
+          lunch lineage_AcerOne8T482L-userdebug
+          mka bacon
