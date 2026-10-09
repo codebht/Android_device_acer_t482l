@@ -72,6 +72,14 @@ jobs:
                   revision="main" />
           </manifest>
           EOF
+            - name: Check workspace storage
+        run: |
+          echo "Workspace:"
+          echo "$GITHUB_WORKSPACE"
+          df -h "$GITHUB_WORKSPACE"
+          df -h /
+          echo "Current workspace usage:"
+          du -sh "$GITHUB_WORKSPACE" || true
 
       - name: Sync
         run: |
